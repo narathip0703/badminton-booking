@@ -1,0 +1,497 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Sarabun:wght@300;400;500;600;700;800&display=swap');
+
+:root {
+  --primary: #ff6b00;
+  --primary-gradient: linear-gradient(135deg, #ff8c00 0%, #ff5e00 100%);
+  --primary-hover: #e05e00;
+  --primary-light: rgba(255, 107, 0, 0.08);
+  --secondary: #1e1e24;
+  --accent: #10b981; /* Green for available */
+  --accent-light: rgba(16, 185, 129, 0.1);
+  --danger: #ef4444; /* Red for cancel/busy */
+  --danger-gradient: linear-gradient(135deg, #f857a6 0%, #ff5858 100%);
+  --danger-light: rgba(239, 68, 68, 0.08);
+  --bg-light: #f5f7fb;
+  --bg-dark: #121214;
+  --card-bg: #ffffff;
+  --text-primary: #1e1e24;
+  --text-secondary: #718096;
+  --text-white: #ffffff;
+  --border-color: #edf2f7;
+  --radius-sm: 8px;
+  --radius-md: 16px;
+  --radius-lg: 24px;
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 8px 20px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 12px 28px rgba(255, 107, 0, 0.12);
+  --transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  font-family: 'Outfit', 'Sarabun', -apple-system, sans-serif;
+  background-color: #e2e8f0;
+  color: var(--text-primary);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* Container จำลองหน้าจอมือถือสำหรับเปิดใน Desktop */
+.app-container {
+  width: 100%;
+  max-width: 480px; /* ขนาดหน้าจอมือถือมาตรฐาน */
+  height: 100vh;
+  min-height: 600px;
+  max-height: 920px;
+  background-color: var(--bg-light);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  border-radius: 0px;
+}
+
+/* แสดงขอบมนสวยงามเฉพาะเวลาเปิดบนคอม desktop */
+@media (min-width: 481px) {
+  .app-container {
+    border-radius: var(--radius-lg);
+    border: 8px solid #2d3748;
+    height: 85vh;
+  }
+}
+
+/* ซ่อน Scrollbar ของการเลื่อนแนวนอน */
+.hide-scrollbar {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+.hide-scrollbar::-webkit-scrollbar {
+  display: none; /* Chrome, Safari and Opera */
+}
+
+/* Dynamic Animation classes */
+@keyframes slideInLeft {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+@keyframes scaleUp {
+  from {
+    transform: scale(0.96);
+    opacity: 0.8;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* สไตล์ Drawer เมนูขีดสามขีด */
+.drawer-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(4px);
+  z-index: 100;
+  animation: fadeIn 0.25s ease-out;
+}
+
+.drawer-menu {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 290px;
+  height: 100%;
+  background-color: var(--card-bg);
+  box-shadow: 10px 0 30px rgba(0, 0, 0, 0.15);
+  z-index: 101;
+  display: flex;
+  flex-direction: column;
+  animation: slideInLeft 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  padding: 30px 24px;
+}
+
+/* Tab indicator */
+.nav-tab {
+  flex: 1;
+  text-align: center;
+  padding: 12px 16px;
+  font-weight: 700;
+  font-size: 15px;
+  cursor: pointer;
+  transition: var(--transition);
+  border-bottom: 3px solid transparent;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.nav-tab.active {
+  color: var(--text-white);
+  border-bottom-color: var(--text-white);
+}
+
+/* Time slot cell */
+.slot-cell {
+  background-color: var(--card-bg);
+  border: 1.5px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  padding: 10px 6px;
+  text-align: center;
+  cursor: pointer;
+  transition: var(--transition);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  font-weight: 600;
+}
+
+.slot-cell:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-sm);
+}
+
+.slot-cell.available {
+  border-color: var(--accent);
+  color: var(--accent);
+  background-color: var(--accent-light);
+}
+
+.slot-cell.selected {
+  background: var(--primary-gradient);
+  border-color: var(--primary);
+  color: var(--text-white);
+  box-shadow: 0 4px 12px rgba(255, 107, 0, 0.25);
+  transform: scale(1.02);
+}
+
+.slot-cell.booked-others {
+  background-color: var(--border-color);
+  border-color: var(--border-color);
+  color: var(--text-secondary);
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+.slot-cell.booked-others:hover {
+  transform: none;
+  box-shadow: none;
+}
+
+.slot-cell.booked-me {
+  background-color: var(--primary-light);
+  border: 1.5px dashed var(--primary);
+  color: var(--primary);
+  position: relative;
+}
+
+/* Floating bottom sheets */
+.bottom-sheet {
+  background-color: var(--card-bg);
+  border-top-left-radius: var(--radius-lg);
+  border-top-right-radius: var(--radius-lg);
+  box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.08);
+  padding: 20px 24px;
+  animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Smooth button scales */
+.btn-animate {
+  transition: var(--transition);
+}
+.btn-animate:active {
+  transform: scale(0.95);
+}
+
+/* Custom Scroll styling */
+.horizontal-scroll {
+  display: flex;
+  overflow-x: auto;
+  gap: 12px;
+  padding: 8px 4px 12px 4px;
+}
+
+/* ==================================================== */
+/* 🏸 COURT HALL MAP VISUAL STYLING */
+/* ==================================================== */
+.court-hall {
+  background-color: #101725; /* สนามพื้นยางสีน้ำเงิน/ดำเข้ม */
+  border: 4px solid #1f2937;
+  border-radius: var(--radius-md);
+  padding: 16px 14px;
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 20px;
+  box-shadow: inset 0 4px 15px rgba(0,0,0,0.6);
+  position: relative;
+  overflow: hidden;
+}
+
+/* ลายตารางไม้ปาร์เก้/เส้นรอบนอกจำลอง */
+.court-hall::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border: 1px dashed rgba(255, 255, 255, 0.05);
+  pointer-events: none;
+}
+
+.court-col-left {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between; /* กระจายสนาม 6 บน, 7 ล่าง */
+  height: 380px;
+  flex: 1;
+}
+
+.court-col-right {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex: 1.5;
+}
+
+/* การ์ดสนามแต่ละคอร์ท */
+.court-item {
+  background-color: #075e39; /* สีเขียวพื้นสนามแบดมินตัน */
+  border: 2px solid #ffffff;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  cursor: pointer;
+  transition: var(--transition);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+  text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+  overflow: hidden;
+}
+
+.court-item:hover {
+  transform: scale(1.03);
+  background-color: #0a7347;
+  border-color: var(--primary);
+  box-shadow: 0 8px 20px rgba(255, 107, 0, 0.35);
+}
+
+.court-item:active {
+  transform: scale(0.97);
+}
+
+/* คอร์ทแนวตั้ง (สนาม 6, 7) */
+.court-vertical {
+  height: 175px;
+  width: 100%;
+  border-radius: 6px;
+}
+
+/* เส้นตีสนามสำหรับแนวตั้ง */
+.court-vertical::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 2px;
+  background-color: rgba(255, 255, 255, 0.7); /* Net Line */
+  transform: translateY(-50%);
+  z-index: 1;
+}
+
+.court-vertical::after {
+  content: '';
+  position: absolute;
+  inset: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  pointer-events: none;
+}
+
+/* คอร์ทแนวนอน (สนาม 1, 2, 3, 4, 5) */
+.court-horizontal {
+  height: 68px;
+  width: 100%;
+  border-radius: 6px;
+}
+
+/* เส้นตีสนามสำหรับแนวนอน */
+.court-horizontal::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 2px;
+  background-color: rgba(255, 255, 255, 0.7); /* Net Line */
+  transform: translateX(-50%);
+  z-index: 1;
+}
+
+.court-horizontal::after {
+  content: '';
+  position: absolute;
+  inset: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  pointer-events: none;
+}
+
+/* ป้ายชื่อคอร์ทตรงกลาง */
+.court-title {
+  font-size: 16px;
+  font-weight: 800;
+  z-index: 2;
+}
+
+/* ป้ายสถานะว่าง เช่น "ว่าง 12/12" */
+.court-badge {
+  font-size: 10px;
+  font-weight: 700;
+  background-color: rgba(0, 0, 0, 0.6);
+  padding: 2px 6px;
+  border-radius: 12px;
+  margin-top: 4px;
+  z-index: 2;
+  border: 0.5px solid rgba(255,255,255,0.3);
+}
+
+.court-badge.full {
+  background-color: rgba(239, 68, 68, 0.85);
+  color: white;
+}
+
+.court-badge.available-high {
+  background-color: rgba(16, 185, 129, 0.85);
+  color: white;
+}
+
+/* ==================================================== */
+/* 🏃 MATCH PARTICIPANTS LIST STYLING */
+/* ==================================================== */
+.participant-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  background-color: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  margin-bottom: 8px;
+  box-shadow: var(--shadow-sm);
+  transition: var(--transition);
+}
+
+.participant-item:hover {
+  border-color: rgba(255, 107, 0, 0.2);
+  background-color: rgba(255, 107, 0, 0.01);
+}
+
+.participant-num {
+  font-weight: 800;
+  color: var(--text-secondary);
+  font-size: 14px;
+  width: 24px;
+}
+
+.participant-name {
+  font-weight: 600;
+  color: var(--text-primary);
+  font-size: 14px;
+  flex-grow: 1;
+  margin-left: 4px;
+}
+
+.participant-badge {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 12px;
+  margin-right: 10px;
+}
+
+.participant-badge.p-beginner {
+  background-color: var(--accent-light);
+  color: var(--accent);
+}
+
+.participant-badge.p-intermediate {
+  background-color: var(--primary-light);
+  color: var(--primary);
+}
+
+.participant-badge.p-advanced {
+  background-color: var(--danger-light);
+  color: var(--danger);
+}
+
+/* ==================================================== */
+/* 💰 MATCHMAKING PRICING STYLING (เพิ่มขึ้นมาใหม่) */
+/* ==================================================== */
+.price-scale-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin: 10px 0;
+}
+
+.price-scale-box {
+  background-color: #fffaf7;
+  border: 1.5px solid rgba(255, 107, 0, 0.15);
+  border-radius: var(--radius-sm);
+  padding: 8px 4px;
+  text-align: center;
+  transition: var(--transition);
+  box-shadow: var(--shadow-sm);
+}
+
+.price-scale-box:hover {
+  border-color: var(--primary);
+  transform: translateY(-1px);
+}
+
+.price-scale-title {
+  font-size: 11px;
+  color: var(--text-secondary);
+  font-weight: bold;
+}
+
+.price-scale-val {
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--primary);
+  margin-top: 2px;
+}

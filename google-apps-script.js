@@ -1,0 +1,419 @@
+// =====================================================================
+// 📋 Google Apps Script สำหรับ SUSA Badminton Court Booking (รวมระบบ LINE OA)
+// =====================================================================
+
+// 📅 แปลงวันที่ yyyy-MM-dd เป็นภาษาไทยอ่านง่าย เช่น "จันทร์ 2 มิ.ย. 69"
+
+function formatThaiDate(dateStr) {
+  try {
+    const days = ['อาทิตย์', 'จันทร์', 'อังคาร', 'พุธ', 'พฤหัสบดี', 'ศุกร์', 'เสาร์'];
+    const months = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+    const parts = dateStr.split('-');
+    const d = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+    const dayName = days[d.getDay()];
+    const dateNum = d.getDate();
+    const monthName = months[d.getMonth()];
+    const thaiYear = (d.getFullYear() + 543) % 100;
+    return `${dayName} ${dateNum} ${monthName} ${thaiYear}`;
+  } catch (err) {
+    return dateStr;
+  }
+}
+
+// 🕒 ฟังก์ชันรวมเวลาที่ติดกัน เช่น ["16:00 - 16:30", "16:30 - 17:00"] -> "16:00 - 17:00"
+function mergeTimeSlots(times) {
+  if (!times || times.length === 0) return '';
+  let slots = times.map(t => {
+    let [s, e] = t.split('-').map(x => x.trim());
+    let sm = parseInt(s.split(':')[0]) * 60 + parseInt(s.split(':')[1]);
+    let em = parseInt(e.split(':')[0]) * 60 + parseInt(e.split(':')[1]);
+    return { s, e, sm, em };
+  }).sort((a, b) => a.sm - b.sm);
+
+  let merged = [];
+  let curr = slots[0];
+
+  for (let i = 1; i < slots.length; i++) {
+    if (slots[i].sm <= curr.em) {
+      if (slots[i].em > curr.em) {
+        curr.em = slots[i].em;
+        curr.e = slots[i].e;
+      }
+    } else {
+      merged.push(curr);
+      curr = slots[i];
+    }
+  }
+  merged.push(curr);
+
+  return merged.map(m => `${m.s} - ${m.e}`).join(', ');
+}
+function doPost(e) {
+  try {
+    const data = JSON.parse(e.postData.contents);
+
+    // 🟢 ตรวจสอบว่าเป็น Webhook จาก LINE หรือไม่ (เพื่อดึง Group ID)
+    if (data.events) {
+      data.events.forEach(event => {
+        let source = event.source;
+        // ถ้ารับข้อความมาจากกลุ่ม หรือดึงบอทเข้ากลุ่ม
+        if (source && source.groupId) {
+          if (event.replyToken) {
+            replyLineMessage(event.replyToken, `ดึงบอทเข้ากลุ่มเรียบร้อย!\n\nรหัสกลุ่ม (Group ID) คือ:\n${source.groupId}\n\nให้นำรหัสนี้ไปใส่แทน userId ในโค้ด Google Apps Script ได้เลยครับ`);
+          }
+        }
+      });
+      return ContentService.createTextOutput("OK").setMimeType(ContentService.MimeType.TEXT);
+    }
+
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+
+    if (data.action === 'booking') {
+      const lock = LockService.getScriptLock();
+      try {
+        lock.waitLock(10000);
+
+        const sheet = ss.getSheetByName('จองสนาม');
+        const rows = sheet.getDataRange().getDisplayValues();
+
+        let isConflict = false;
+        let conflictDetails = [];
+
+        for (let j = 0; j < data.bookings.length; j++) {
+          let target = data.bookings[j];
+          for (let i = 1; i < rows.length; i++) {
+            if (rows[i][1] == target.date && rows[i][2] == target.court && rows[i][3] == target.time) {
+              isConflict = true;
+              conflictDetails.push(`${target.court} เวลา ${target.time}`);
+              break;
+            }
+          }
+        }
+
+        if (isConflict) {
+          return ContentService.createTextOutput(JSON.stringify({
+            status: 'conflict',
+            message: 'ขออภัย มีผู้จองตัดหน้าไปแล้ว: ' + conflictDetails.join(', ')
+          })).setMimeType(ContentService.MimeType.JSON);
+        }
+
+        // 🟢 บันทึกการจองสำเร็จ -> เตรียมสร้างข้อความแจ้งเตือน LINE
+        let summaryMap = {};
+        data.bookings.forEach(function (booking) {
+          sheet.appendRow([
+            new Date(),
+            booking.date,
+            booking.court,
+            booking.time,
+            booking.price,
+            booking.name,
+            booking.phone
+          ]);
+
+          let key = `${booking.name}|${booking.date}|${booking.court}`;
+          if (!summaryMap[key]) summaryMap[key] = { name: booking.name, date: booking.date, court: booking.court, times: [] };
+          summaryMap[key].times.push(booking.time);
+        });
+
+        let lineMessage = "📝 มีรายการจองสนามใหม่!\n";
+        for (let key in summaryMap) {
+          let s = summaryMap[key];
+          lineMessage += `• ชื่อ: ${s.name}\n  สนาม: ${s.court}\n  เวลา: ${mergeTimeSlots(s.times)}\n  วันที่: ${formatThaiDate(s.date)}\n`;
+        }
+
+        // 🚀 ส่งแจ้งเตือนไปที่ LINE OA (ห้ามให้ LINE พังแล้วทำให้ระบบหลักพัง)
+        try { sendLineNotification(lineMessage.trim()); } catch (lineErr) { console.error("Line Notify Error (booking):", lineErr); }
+
+        return ContentService.createTextOutput(JSON.stringify({ status: 'success', message: 'บันทึกการจองสำเร็จ' })).setMimeType(ContentService.MimeType.JSON);
+
+      } catch (e) {
+        return ContentService.createTextOutput(JSON.stringify({ status: 'error', message: 'ระบบไม่ว่าง กรุณาลองใหม่ (Server Busy)' })).setMimeType(ContentService.MimeType.JSON);
+      } finally {
+        lock.releaseLock();
+      }
+
+    } else if (data.action === 'match_register') {
+      const sheet = ss.getSheetByName('ลงชื่อตีเกม');
+      sheet.appendRow([
+        new Date(),
+        data.name,
+        data.level
+      ]);
+
+      // 🚀 ส่งแจ้งเตือน LINE เมื่อมีคนลงชื่อตีเกม
+      try { sendLineNotification(`🏸 มีคนลงชื่อตีเกมเพิ่ม!\n• คุณ ${data.name} (Level: ${data.level})`); } catch (lineErr) { console.error("Line Notify Error (match_register):", lineErr); }
+
+      return ContentService.createTextOutput(JSON.stringify({ status: 'success', message: 'บันทึกลงชื่อตีเกมสำเร็จ' })).setMimeType(ContentService.MimeType.JSON);
+
+    } else if (data.action === 'cancel_bookings') {
+      const sheet = ss.getSheetByName('จองสนาม');
+      const rows = sheet.getDataRange().getValues();
+      const normalizePhone = (p) => p ? String(p).replace(/^0+/, '').trim() : '';
+
+      let cancelSummary = {};
+      let cancelledCount = 0;
+
+      data.bookings.forEach(function (target) {
+        for (let i = rows.length - 1; i >= 1; i--) {
+          let rowDate = rows[i][1];
+          if (rowDate instanceof Date) {
+            rowDate = Utilities.formatDate(rowDate, Session.getScriptTimeZone(), "yyyy-MM-dd");
+          } else {
+            rowDate = rowDate.toString();
+          }
+
+          if (
+            rowDate == target.date &&
+            rows[i][2] == target.court &&
+            rows[i][3] == target.time &&
+            String(rows[i][5]).trim() === String(target.name).trim() &&
+            normalizePhone(rows[i][6]) === normalizePhone(target.phone)
+          ) {
+            sheet.deleteRow(i + 1);
+            rows.splice(i, 1);
+
+            let key = `${target.name}|${target.date}|${target.court}`;
+            if (!cancelSummary[key]) cancelSummary[key] = { name: target.name, date: target.date, court: target.court, times: [] };
+            cancelSummary[key].times.push(target.time);
+
+            cancelledCount++;
+            break;
+          }
+        }
+      });
+
+      let cancelMessage = "🗑️ มีการยกเลิกการจองสนาม!\n";
+      for (let key in cancelSummary) {
+        let s = cancelSummary[key];
+        cancelMessage += `• ชื่อ: ${s.name}\n  สนาม: ${s.court}\n  เวลา: ${mergeTimeSlots(s.times)}\n  วันที่: ${formatThaiDate(s.date)}\n`;
+      }
+
+      // 🚀 ส่งแจ้งเตือน LINE เฉพาะเมื่อมีการยกเลิกจริง
+      if (cancelledCount > 0) {
+        try { sendLineNotification(cancelMessage.trim()); } catch (lineErr) { console.error("Line Notify Error (cancel_bookings):", lineErr); }
+      }
+
+      return ContentService.createTextOutput(JSON.stringify({ status: 'success', message: 'ยกเลิกรายการจองใน Sheet เรียบร้อย' })).setMimeType(ContentService.MimeType.JSON);
+
+    } else if (data.action === 'cancel_match') {
+      const sheet = ss.getSheetByName('ลงชื่อตีเกม');
+      const rows = sheet.getDataRange().getValues();
+
+      for (let i = rows.length - 1; i >= 1; i--) {
+        if (rows[i][1] == data.name) {
+          sheet.deleteRow(i + 1);
+          rows.splice(i, 1);
+        }
+      }
+
+      // 🚀 ส่งแจ้งเตือน LINE เมื่อมีคนถอนชื่อตีเกม
+      try { sendLineNotification(`❌ คุณ ${data.name} ได้ถอนชื่อออกจากรายการตีเกมแล้ว`); } catch (lineErr) { console.error("Line Notify Error (cancel_match):", lineErr); }
+
+      return ContentService.createTextOutput(JSON.stringify({ status: 'success', message: 'ยกเลิกลงชื่อตีเกมใน Sheet เรียบร้อย' })).setMimeType(ContentService.MimeType.JSON);
+
+    } else if (data.action === 'move_booking') {
+      const lock = LockService.getScriptLock();
+      try {
+        lock.waitLock(10000);
+        const sheet = ss.getSheetByName('จองสนาม');
+        const rows = sheet.getDataRange().getDisplayValues();
+        const normalizePhone = (p) => p ? String(p).replace(/^0+/, '').trim() : '';
+
+        const oldBookings = data.oldBookings;
+        const newBookings = data.newBookings;
+        let oldRowIndices = [];
+        let isConflict = false;
+        let conflictMessage = '';
+
+        for (let b = 0; b < oldBookings.length; b++) {
+          let oldB = oldBookings[b];
+          let foundIndex = -1;
+          for (let i = 1; i < rows.length; i++) {
+            let rowDate = rows[i][1];
+            if (rowDate instanceof Date) {
+              rowDate = Utilities.formatDate(rowDate, Session.getScriptTimeZone(), "yyyy-MM-dd");
+            }
+            if (
+              rowDate == oldB.date &&
+              rows[i][2] == oldB.court &&
+              rows[i][3] == oldB.time &&
+              String(rows[i][5]).trim() === String(oldB.name).trim() &&
+              normalizePhone(rows[i][6]) === normalizePhone(oldB.phone)
+            ) {
+              foundIndex = i + 1;
+              break;
+            }
+          }
+          if (foundIndex === -1) {
+            return ContentService.createTextOutput(JSON.stringify({
+              status: 'error',
+              message: `ไม่พบข้อมูลการจองเดิม (${oldB.time}) หรือคุณไม่มีสิทธิ์ย้ายเวลานี้`
+            })).setMimeType(ContentService.MimeType.JSON);
+          }
+          oldRowIndices.push(foundIndex);
+        }
+
+        for (let b = 0; b < newBookings.length; b++) {
+          let newB = newBookings[b];
+          for (let i = 1; i < rows.length; i++) {
+            if (oldRowIndices.includes(i + 1)) continue;
+            let rowDate = rows[i][1];
+            if (rowDate instanceof Date) {
+              rowDate = Utilities.formatDate(rowDate, Session.getScriptTimeZone(), "yyyy-MM-dd");
+            }
+            if (rowDate == newB.date && rows[i][2] == newB.court && rows[i][3] == newB.time) {
+              isConflict = true;
+              conflictMessage = `ขออภัย เวลาใหม่ (${newB.court} ${newB.time}) ถูกจองไปแล้ว`;
+              break;
+            }
+          }
+          if (isConflict) break;
+        }
+
+        if (isConflict) {
+          return ContentService.createTextOutput(JSON.stringify({ status: 'conflict', message: conflictMessage })).setMimeType(ContentService.MimeType.JSON);
+        }
+
+        oldRowIndices.sort((a, b) => b - a);
+        oldRowIndices.forEach(idx => sheet.deleteRow(idx));
+
+        let moveSummary = {};
+        newBookings.forEach(newB => {
+          sheet.appendRow([
+            new Date(),
+            newB.date,
+            newB.court,
+            newB.time,
+            newB.price,
+            newB.name,
+            newB.phone
+          ]);
+
+          let key = `${newB.name}|${newB.date}|${newB.court}`;
+          if (!moveSummary[key]) moveSummary[key] = { name: newB.name, date: newB.date, court: newB.court, times: [] };
+          moveSummary[key].times.push(newB.time);
+        });
+
+        let moveMessage = "🔄 มีการย้ายเวลาจองสนาม!\n";
+        for (let key in moveSummary) {
+          let s = moveSummary[key];
+          moveMessage += `• ชื่อ: ${s.name}\n  สนาม: ${s.court}\n  เวลา: ${mergeTimeSlots(s.times)}\n  วันที่: ${formatThaiDate(s.date)}\n`;
+        }
+
+        // 🚀 ส่งแจ้งเตือน LINE เมื่อย้ายสำเร็จ
+        try { sendLineNotification(moveMessage.trim()); } catch (lineErr) { console.error("Line Notify Error (move_booking):", lineErr); }
+
+        return ContentService.createTextOutput(JSON.stringify({ status: 'success', message: 'ย้ายเวลาสำเร็จ' })).setMimeType(ContentService.MimeType.JSON);
+
+      } catch (e) {
+        return ContentService.createTextOutput(JSON.stringify({ status: 'error', message: 'ระบบไม่ว่าง (Server Busy)' })).setMimeType(ContentService.MimeType.JSON);
+      } finally {
+        lock.releaseLock();
+      }
+
+    } else {
+      return ContentService.createTextOutput(JSON.stringify({ status: 'error', message: 'Unknown action' })).setMimeType(ContentService.MimeType.JSON);
+    }
+  } catch (error) {
+    return ContentService.createTextOutput(JSON.stringify({ status: 'error', message: error.toString() })).setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+function doGet(e) {
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheetByName('จองสนาม');
+    if (!sheet) return ContentService.createTextOutput(JSON.stringify([])).setMimeType(ContentService.MimeType.JSON);
+
+    const rows = sheet.getDataRange().getDisplayValues();
+    const bookings = [];
+    for (let i = 1; i < rows.length; i++) {
+      if (rows[i][1] && rows[i][2] && rows[i][3]) {
+        bookings.push({
+          date: rows[i][1],
+          court: rows[i][2],
+          time: rows[i][3],
+          price: rows[i][4],
+          name: rows[i][5],
+          phone: rows[i][6]
+        });
+      }
+    }
+
+    const matchSheet = ss.getSheetByName('ลงชื่อตีเกม');
+    const participants = [];
+    if (matchSheet) {
+      const matchRows = matchSheet.getDataRange().getDisplayValues();
+      for (let i = 1; i < matchRows.length; i++) {
+        if (matchRows[i][1]) {
+          participants.push({ name: matchRows[i][1], level: matchRows[i][2] });
+        }
+      }
+    }
+    return ContentService.createTextOutput(JSON.stringify({ bookings, participants })).setMimeType(ContentService.MimeType.JSON);
+  } catch (error) {
+    return ContentService.createTextOutput(JSON.stringify({ status: 'error', message: error.toString() })).setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+// 🔔 ฟังก์ชันกลางสำหรับเรียกยิงส่งข้อความไปยัง LINE OA (ใช้โทเคนและรหัสของคุณ)
+function sendLineNotification(text) {
+  const accessToken = "H4TjEkv8jZi0FQxBZ6e8MPl7b7+36VSfrQoI56oI6bhFeYSshgcSQrlKGWNKFojW9ep9pY/oiCRwZyFetiZpeT3wuhQiqjJYnsI1d3jnYTMeDnt1gQe1AT3QrFLMAU9yojus/gHIeouR+r2huXlGWwdB04t89/1O/w1cDnyilFU=";
+  const userId = "Cbb92e94106f90ef308d216ca5b28ed57"; // 🟢 เปลี่ยนมาใช้ Group ID แล้ว
+  const url = "https://api.line.me/v2/bot/message/push";
+
+  const payload = {
+    "to": userId,
+    "messages": [
+      {
+        "type": "text",
+        "text": text
+      }
+    ]
+  };
+
+  const options = {
+    "method": "post",
+    "headers": {
+      "Content-Type": "application/json",
+      "Authorization": "Bearer " + accessToken
+    },
+    "payload": JSON.stringify(payload),
+    "muteHttpExceptions": true
+  };
+
+  try {
+    const response = UrlFetchApp.fetch(url, options);
+    console.log("LINE API Response:", response.getContentText());
+  } catch (error) {
+    console.error("UrlFetchApp Error:", error);
+    throw error;
+  }
+}
+
+// 🔔 ฟังก์ชันสำหรับตอบกลับ LINE (ใช้สำหรับแจ้ง Group ID เวลาดึงเข้ากลุ่ม)
+function replyLineMessage(replyToken, text) {
+  const accessToken = "H4TjEkv8jZi0FQxBZ6e8MPl7b7+36VSfrQoI56oI6bhFeYSshgcSQrlKGWNKFojW9ep9pY/oiCRwZyFetiZpeT3wuhQiqjJYnsI1d3jnYTMeDnt1gQe1AT3QrFLMAU9yojus/gHIeouR+r2huXlGWwdB04t89/1O/w1cDnyilFU=";
+  const url = "https://api.line.me/v2/bot/message/reply";
+
+  const payload = {
+    "replyToken": replyToken,
+    "messages": [{ "type": "text", "text": text }]
+  };
+
+  const options = {
+    "method": "post",
+    "headers": {
+      "Content-Type": "application/json",
+      "Authorization": "Bearer " + accessToken
+    },
+    "payload": JSON.stringify(payload),
+    "muteHttpExceptions": true
+  };
+
+  try {
+    UrlFetchApp.fetch(url, options);
+  } catch (error) {
+    console.error("Reply Error:", error);
+  }
+}
