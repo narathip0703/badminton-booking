@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 // ==========================================
 // 🔗 Google Sheets Web App URL
 // ==========================================
-const GOOGLE_SHEET_URL = 'https://script.google.com/macros/s/AKfycbxoJu7dH4xEGlo2jzWSMQlr_MrB_WviCZZixLhdecJYEh4BAGvbX2TjTWg8eDXZ17327w/exec';
+const GOOGLE_SHEET_URL = 'https://script.google.com/macros/s/AKfycbw0fqnVKNsYDehzxrGeLYy4frHNbi5NgKnoBOVXyJrCXvumf_kiKs_dm_RftAE15xfFgA/exec';
 
 // ==========================================
 // 📤 ฟังก์ชันส่งข้อมูลไป Google Sheets

@@ -20,6 +20,15 @@ function formatThaiDate(dateStr) {
   }
 }
 
+// =====================================================================
+// 🧪 ฟังก์ชันทดสอบส่ง LINE (ให้กดรันจากหน้า Apps Script เพื่อเช็คว่า LINE ทำงานไหม)
+// =====================================================================
+function testLineNotification() {
+  const result = sendLineNotification("🧪 ทดสอบแจ้งเตือน LINE จากระบบจองสนาม SUSA\n\nถ้าเห็นข้อความนี้แสดงว่าระบบ LINE ทำงานปกติครับ!");
+  Logger.log("=== ผลการทดสอบ LINE ===");
+  Logger.log(result);
+}
+
 // 🕒 ฟังก์ชันรวมเวลาที่ติดกัน เช่น ["16:00 - 16:30", "16:30 - 17:00"] -> "16:00 - 17:00"
 function mergeTimeSlots(times) {
   if (!times || times.length === 0) return '';
@@ -358,7 +367,7 @@ function doGet(e) {
 
 // 🔔 ฟังก์ชันกลางสำหรับเรียกยิงส่งข้อความไปยัง LINE OA (ใช้โทเคนและรหัสของคุณ)
 function sendLineNotification(text) {
-  const accessToken = "H4TjEkv8jZi0FQxBZ6e8MPl7b7+36VSfrQoI56oI6bhFeYSshgcSQrlKGWNKFojW9ep9pY/oiCRwZyFetiZpeT3wuhQiqjJYnsI1d3jnYTMeDnt1gQe1AT3QrFLMAU9yojus/gHIeouR+r2huXlGWwdB04t89/1O/w1cDnyilFU=";
+  const accessToken = "28STSX5rxOxxw7quHv/qE9lzgaKtBRFWv67BVk0xFTvRVh5xsmaWoB8DWaeKZlWU9ep9pY/oiCRwZyFetiZpeT3wuhQiqjJYnsI1d3jnYTP6Hderji0yNqpAw2Tx/jb6oTx+WVSSO3KkWSoqmKzBwwdB04t89/1O/w1cDnyilFU=";
   const userId = "Cbb92e94106f90ef308d216ca5b28ed57"; // 🟢 เปลี่ยนมาใช้ Group ID แล้ว
   const url = "https://api.line.me/v2/bot/message/push";
 
@@ -384,16 +393,20 @@ function sendLineNotification(text) {
 
   try {
     const response = UrlFetchApp.fetch(url, options);
-    console.log("LINE API Response:", response.getContentText());
+    const responseCode = response.getResponseCode();
+    const responseBody = response.getContentText();
+    Logger.log("LINE API Status Code: " + responseCode);
+    Logger.log("LINE API Response: " + responseBody);
+    return "Status: " + responseCode + " | Body: " + responseBody;
   } catch (error) {
-    console.error("UrlFetchApp Error:", error);
+    Logger.log("UrlFetchApp Error: " + error.toString());
     throw error;
   }
 }
 
 // 🔔 ฟังก์ชันสำหรับตอบกลับ LINE (ใช้สำหรับแจ้ง Group ID เวลาดึงเข้ากลุ่ม)
 function replyLineMessage(replyToken, text) {
-  const accessToken = "H4TjEkv8jZi0FQxBZ6e8MPl7b7+36VSfrQoI56oI6bhFeYSshgcSQrlKGWNKFojW9ep9pY/oiCRwZyFetiZpeT3wuhQiqjJYnsI1d3jnYTMeDnt1gQe1AT3QrFLMAU9yojus/gHIeouR+r2huXlGWwdB04t89/1O/w1cDnyilFU=";
+  const accessToken = "28STSX5rxOxxw7quHv/qE9lzgaKtBRFWv67BVk0xFTvRVh5xsmaWoB8DWaeKZlWU9ep9pY/oiCRwZyFetiZpeT3wuhQiqjJYnsI1d3jnYTP6Hderji0yNqpAw2Tx/jb6oTx+WVSSO3KkWSoqmKzBwwdB04t89/1O/w1cDnyilFU=";
   const url = "https://api.line.me/v2/bot/message/reply";
 
   const payload = {
@@ -415,5 +428,59 @@ function replyLineMessage(replyToken, text) {
     UrlFetchApp.fetch(url, options);
   } catch (error) {
     console.error("Reply Error:", error);
+  }
+}
+
+// =====================================================================
+// 🧹 ฟังก์ชันสำหรับลบข้อมูลของวันที่ผ่านมาแล้ว (ตั้งเวลา Trigger ให้ทำงานทุกวัน)
+// =====================================================================
+function deleteOldBookings() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+
+  // 1. ลบรายการจองสนามที่ผ่านวันไปแล้ว
+  const bookingSheet = ss.getSheetByName('จองสนาม');
+  if (bookingSheet) {
+    const rows = bookingSheet.getDataRange().getValues();
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // รีเซ็ตเวลาเป็น 00:00:00 ของวันนี้
+
+    // วนลูปจากล่างขึ้นบน เพื่อป้องกันปัญหา Index ของแถวเลื่อนเวลาลบ
+    for (let i = rows.length - 1; i >= 1; i--) {
+      let rowDateStr = rows[i][1];
+      if (!rowDateStr) continue;
+
+      let rowDate;
+      if (rowDateStr instanceof Date) {
+        rowDate = rowDateStr;
+      } else {
+        // กรณีเป็น Text รูปแบบ yyyy-MM-dd
+        let parts = String(rowDateStr).split('-');
+        if (parts.length === 3) {
+          rowDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+        }
+      }
+
+      // ถ้าวันที่จองน้อยกว่าวันนี้ (เป็นอดีต) ให้ลบแถวนั้นทิ้ง
+      if (rowDate && rowDate < today) {
+        bookingSheet.deleteRow(i + 1);
+      }
+    }
+  }
+
+  // 2. ลบรายการลงชื่อตีเกมของเมื่อวานทิ้ง (เช็คจาก Timestamp คอลัมน์แรก)
+  const matchSheet = ss.getSheetByName('ลงชื่อตีเกม');
+  if (matchSheet) {
+    const matchRows = matchSheet.getDataRange().getValues();
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    for (let i = matchRows.length - 1; i >= 1; i--) {
+      let timestamp = matchRows[i][0];
+      if (timestamp instanceof Date) {
+        if (timestamp < today) {
+          matchSheet.deleteRow(i + 1);
+        }
+      }
+    }
   }
 }
