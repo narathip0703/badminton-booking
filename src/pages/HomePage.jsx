@@ -219,9 +219,16 @@ function HomePage({ handleLogout }) {
         return () => clearInterval(timer);
     }, []);
 
-    // 💡 ดึงข้อมูลตามจริงจาก Google Sheets ทันทีเมื่อเปิดหน้าเว็บ
+    // 💡 ดึงข้อมูลตามจริงจาก Google Sheets ทันทีเมื่อเปิดหน้าเว็บ และอัปเดตอัตโนมัติทุกๆ 1 นาที
     useEffect(() => {
         fetchBookingsFromSheet(setBookedSlots, setParticipantsList, showToast);
+        
+        const refreshTimer = setInterval(() => {
+            // ดึงข้อมูลเบื้องหลังทุก 60 วินาที โดยไม่ให้โชว์แจ้งเตือนซ้ำๆ
+            fetchBookingsFromSheet(setBookedSlots, setParticipantsList, () => {});
+        }, 60000); // 60000 ms = 1 นาที
+
+        return () => clearInterval(refreshTimer);
     }, []);
 
     // ==========================================
