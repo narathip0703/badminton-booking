@@ -18,11 +18,11 @@ function MatchLobby({
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginLeft: '6px' }}>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                         <span style={{ fontSize: '11px', color: 'var(--primary)', fontWeight: 'bold' }}>🏸 ก๊วนหลัก สนาม SUSA วันนี้</span>
-                        <h2 style={{ fontSize: '17px', fontWeight: '800', color: 'var(--text-primary)', margin: '2px 0 6px 0' }}>ก๊วนพี่เอก ชวนตีเกมร่วมสนุก</h2>
+                        <h2 style={{ fontSize: '17px', fontWeight: '800', color: 'var(--text-primary)', margin: '2px 0 6px 0' }}>ก๊วนพี่เก้ง ชวนตีเกมร่วมสนุก</h2>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', fontSize: '12px', color: 'var(--text-secondary)' }}>
-                            <div><i className="fa-solid fa-user-tie" style={{ width: '18px', color: 'var(--primary)' }}></i> <b>ผู้จัด (Host):</b> พี่เอก สายตบ</div>
-                            <div><i className="fa-solid fa-map-location-dot" style={{ width: '18px', color: 'var(--primary)' }}></i> <b>สนาม (Court):</b> สนาม 3 (SUSA Hall)</div>
-                            <div><i className="fa-regular fa-clock" style={{ width: '18px', color: 'var(--primary)' }}></i> <b>ช่วงเวลา:</b> 18:00 - 21:00 น.</div>
+                            <div><i className="fa-solid fa-user-tie" style={{ width: '18px', color: 'var(--primary)' }}></i> <b>ผู้จัด (Host):</b> พี่เก้ง </div>
+                            <div><i className="fa-solid fa-map-location-dot" style={{ width: '18px', color: 'var(--primary)' }}></i> <b>สนาม (Court):</b> สนาม 1-2 (SUSA Hall)</div>
+                            <div><i className="fa-regular fa-clock" style={{ width: '18px', color: 'var(--primary)' }}></i> <b>ช่วงเวลา:</b> 19:00 - 00:00 น.</div>
                             <div><i className="fa-solid fa-ranking-star" style={{ width: '18px', color: 'var(--primary)' }}></i> <b>ระดับฝีมือ:</b> ทุกระดับ (มือใหม่ - มือโปร)</div>
                         </div>
                     </div>
