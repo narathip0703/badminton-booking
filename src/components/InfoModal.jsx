@@ -37,7 +37,7 @@ function InfoModal({ show, onClose }) {
                             ราคาจองสนาม
                         </div>
                         <div style={{ backgroundColor: 'white', padding: '14px', borderRadius: 'var(--radius-sm)', border: '1.5px solid var(--primary)', textAlign: 'center' }}>
-                            <div style={{ fontSize: '28px', fontWeight: '900', color: 'var(--primary)' }}>120 <span style={{ fontSize: '14px', fontWeight: '600' }}>บาท/ชั่วโมง</span></div>
+                            <div style={{ fontSize: '28px', fontWeight: '900', color: 'var(--primary)' }}>130 <span style={{ fontSize: '14px', fontWeight: '600' }}>บาท/ชั่วโมง</span></div>
                             <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '4px' }}>ราคาเดียวตลอดทุกวัน ทุกเวลา</div>
                         </div>
                     </div>
@@ -50,17 +50,17 @@ function InfoModal({ show, onClose }) {
                         </div>
                         <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
                             <div style={{ flex: 1, backgroundColor: 'white', padding: '12px', borderRadius: 'var(--radius-sm)', textAlign: 'center', border: '1px solid var(--border-color)' }}>
-                                <div style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 'bold' }}>👦 เด็ก (ค่าสนาม)</div>
-                                <div style={{ fontSize: '22px', fontWeight: '900', color: 'var(--accent)' }}>20 <span style={{ fontSize: '11px' }}>บาท</span></div>
+                                <div style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 'bold' }}>👦 เด็กหรือนศ (ค่าสนาม)</div>
+                                <div style={{ fontSize: '22px', fontWeight: '900', color: 'var(--accent)' }}>30 <span style={{ fontSize: '11px' }}>บาท</span></div>
                             </div>
                             <div style={{ flex: 1, backgroundColor: 'white', padding: '12px', borderRadius: 'var(--radius-sm)', textAlign: 'center', border: '1px solid var(--border-color)' }}>
                                 <div style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 'bold' }}>🧑 ผู้ใหญ่ (ค่าสนาม)</div>
-                                <div style={{ fontSize: '22px', fontWeight: '900', color: 'var(--primary)' }}>40 <span style={{ fontSize: '11px' }}>บาท</span></div>
+                                <div style={{ fontSize: '22px', fontWeight: '900', color: 'var(--primary)' }}>50 <span style={{ fontSize: '11px' }}>บาท</span></div>
                             </div>
                         </div>
                         <div style={{ backgroundColor: 'white', padding: '10px', borderRadius: 'var(--radius-sm)', textAlign: 'center', border: '1.5px solid var(--primary)' }}>
                             <div style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 'bold' }}>🏸 ค่าตีเกม (ต่อเกม)</div>
-                            <div style={{ fontSize: '22px', fontWeight: '900', color: 'var(--primary)' }}>22 <span style={{ fontSize: '11px' }}>บาท/เกม</span></div>
+                            <div style={{ fontSize: '22px', fontWeight: '900', color: 'var(--primary)' }}>25 <span style={{ fontSize: '11px' }}>บาท/เกม</span></div>
                         </div>
                     </div>
 

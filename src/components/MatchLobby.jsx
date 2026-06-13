@@ -35,9 +35,9 @@ function MatchLobby({
                 <div>
                     <span style={{ fontSize: '11px', color: 'var(--text-primary)', fontWeight: 'bold', display: 'block', marginBottom: '6px' }}>💰 อัตราค่าบริการตีเกมแชร์ร่วมสนุก:</span>
                     <div className="price-scale-grid">
-                        <div className="price-scale-box"><div className="price-scale-title">👦 เด็ก (ค่าสนาม)</div><div className="price-scale-val">20 บาท</div></div>
-                        <div className="price-scale-box"><div className="price-scale-title">🧑 ผู้ใหญ่ (ค่าสนาม)</div><div className="price-scale-val">40 บาท</div></div>
-                        <div className="price-scale-box" style={{ border: '1.5px solid var(--primary)' }}><div className="price-scale-title">🏸 ค่าตีเกม</div><div className="price-scale-val">22 บาท/เกม</div></div>
+                        <div className="price-scale-box"><div className="price-scale-title">👦 เด็กหรือนศ. (ค่าสนาม)</div><div className="price-scale-val">30 บาท</div></div>
+                        <div className="price-scale-box"><div className="price-scale-title">🧑 ผู้ใหญ่ (ค่าสนาม)</div><div className="price-scale-val">50 บาท</div></div>
+                        <div className="price-scale-box" style={{ border: '1.5px solid var(--primary)' }}><div className="price-scale-title">🏸 ค่าตีเกม</div><div className="price-scale-val">25 บาท/เกม</div></div>
                     </div>
                 </div>
             </div>
