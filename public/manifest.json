@@ -1,0 +1,30 @@
+{
+  "name": "SUSA Badminton Booking",
+  "short_name": "SUSA",
+  "description": "ระบบจองสนามแบดมินตัน SUSA และหาเพื่อนตีเกม",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#e2e8f0",
+  "theme_color": "#ff6b00",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "https://cdn.pixabay.com/photo/2013/07/13/10/06/badminton-156542_1280.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "https://cdn.pixabay.com/photo/2013/07/13/10/06/badminton-156542_1280.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
