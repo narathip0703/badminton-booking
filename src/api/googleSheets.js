@@ -1,7 +1,7 @@
 // ==========================================
 // 🔗 Google Sheets Web App URL
 // ==========================================
-export const GOOGLE_SHEET_URL = 'https://script.google.com/macros/s/AKfycbw0fqnVKNsYDehzxrGeLYy4frHNbi5NgKnoBOVXyJrCXvumf_kiKs_dm_RftAE15xfFgA/exec';
+export const GOOGLE_SHEET_URL = 'https://script.google.com/macros/s/AKfycbxP2X6_3uadjhqoYuFPmU12disK_8secGDJX-Lb2Uu2B_H4NBAVZb6rjGFlHOyVlagKKg/exec';
 
 // ==========================================
 // 📤 ฟังก์ชันส่งข้อมูลไป Google Sheets

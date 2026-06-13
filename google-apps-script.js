@@ -119,6 +119,9 @@ function doPost(e) {
             booking.phone
           ]);
 
+          // บันทึกลง DashBoard
+          logToDashboard(ss, 'จอง', booking.date, booking.court, booking.time, booking.price, booking.name, booking.phone);
+
           let key = `${booking.name}|${booking.date}|${booking.court}`;
           if (!summaryMap[key]) summaryMap[key] = { name: booking.name, date: booking.date, court: booking.court, times: [] };
           summaryMap[key].times.push(booking.time);
@@ -148,6 +151,9 @@ function doPost(e) {
         data.name,
         data.level
       ]);
+
+      // บันทึกลง DashBoard
+      logToDashboard(ss, 'ลงชื่อตีเกม', '', '', '', '', data.name, '');
 
       // 🚀 ส่งแจ้งเตือน LINE เมื่อมีคนลงชื่อตีเกม
       try { sendLineNotification(`🏸 มีคนลงชื่อตีเกมเพิ่ม!\n• คุณ ${data.name} (Level: ${data.level})`); } catch (lineErr) { console.error("Line Notify Error (match_register):", lineErr); }
@@ -181,6 +187,9 @@ function doPost(e) {
             sheet.deleteRow(i + 1);
             rows.splice(i, 1);
 
+            // บันทึกลง DashBoard
+            logToDashboard(ss, 'ยกเลิก', target.date, target.court, target.time, '', target.name, target.phone);
+
             let key = `${target.name}|${target.date}|${target.court}`;
             if (!cancelSummary[key]) cancelSummary[key] = { name: target.name, date: target.date, court: target.court, times: [] };
             cancelSummary[key].times.push(target.time);
@@ -212,6 +221,9 @@ function doPost(e) {
         if (rows[i][1] == data.name) {
           sheet.deleteRow(i + 1);
           rows.splice(i, 1);
+
+          // บันทึกลง DashBoard
+          logToDashboard(ss, 'ยกเลิกตีเกม', '', '', '', '', data.name, '');
         }
       }
 
@@ -284,7 +296,15 @@ function doPost(e) {
         }
 
         oldRowIndices.sort((a, b) => b - a);
-        oldRowIndices.forEach(idx => sheet.deleteRow(idx));
+        oldRowIndices.forEach(idx => {
+          let oldData = rows[idx - 1]; // -1 เพราะ idx มาจาก i+1
+          let rowDate = oldData[1];
+          if (rowDate instanceof Date) {
+            rowDate = Utilities.formatDate(rowDate, Session.getScriptTimeZone(), "yyyy-MM-dd");
+          }
+          logToDashboard(ss, 'ยกเลิก (ย้ายเวลา)', rowDate, oldData[2], oldData[3], oldData[4], oldData[5], oldData[6]);
+          sheet.deleteRow(idx);
+        });
 
         let moveSummary = {};
         newBookings.forEach(newB => {
@@ -297,6 +317,9 @@ function doPost(e) {
             newB.name,
             newB.phone
           ]);
+
+          // บันทึกลง DashBoard
+          logToDashboard(ss, 'จอง (ย้ายเวลา)', newB.date, newB.court, newB.time, newB.price, newB.name, newB.phone);
 
           let key = `${newB.name}|${newB.date}|${newB.court}`;
           if (!moveSummary[key]) moveSummary[key] = { name: newB.name, date: newB.date, court: newB.court, times: [] };
@@ -319,6 +342,24 @@ function doPost(e) {
       } finally {
         lock.releaseLock();
       }
+
+      // 🔴🔴🔴 เริ่ม: โค้ดที่เพิ่มเข้ามาใหม่สำหรับระบบ Blacklist 🔴🔴🔴
+    } else if (data.action === 'blacklist') {
+      let sheet = ss.getSheetByName('ยกเลิก 3 ครั้ง');
+      if (!sheet) {
+        sheet = ss.insertSheet('ยกเลิก 3 ครั้ง');
+        sheet.appendRow(['ชื่อ', 'เบอร์โทร', 'เวลาที่โดนแบน']);
+      }
+
+      let timestamp = new Date();
+      let name = data.name || 'ไม่ระบุชื่อ';
+      let phone = data.phone || 'ไม่ระบุเบอร์';
+
+      sheet.appendRow([name, phone, timestamp]);
+
+      // เอาการส่งแจ้งเตือน LINE ออกตามที่ต้องการ
+      return ContentService.createTextOutput(JSON.stringify({ status: 'success', message: 'เพิ่มลง Blacklist เรียบร้อย' })).setMimeType(ContentService.MimeType.JSON);
+      // 🔴🔴🔴 จบ: โค้ดที่เพิ่มเข้ามาใหม่สำหรับระบบ Blacklist 🔴🔴🔴
 
     } else {
       return ContentService.createTextOutput(JSON.stringify({ status: 'error', message: 'Unknown action' })).setMimeType(ContentService.MimeType.JSON);
@@ -359,11 +400,27 @@ function doGet(e) {
         }
       }
     }
-    return ContentService.createTextOutput(JSON.stringify({ bookings, participants })).setMimeType(ContentService.MimeType.JSON);
+
+    // 🔴🔴🔴 เริ่ม: โค้ดที่เพิ่มเข้ามาใหม่เพื่อดึงข้อมูลแบล็คลิสต์ไปเช็ค 🔴🔴🔴
+    const blacklistSheet = ss.getSheetByName('ยกเลิก 3 ครั้ง');
+    const blacklists = [];
+    if (blacklistSheet) {
+      const blRows = blacklistSheet.getDataRange().getDisplayValues();
+      for (let i = 1; i < blRows.length; i++) {
+        if (blRows[i][1]) { // ดึงเบอร์โทรศัพท์ในคอลัมน์ที่ 2 (B)
+          let phoneStr = String(blRows[i][1]).replace(/^0+/, '').trim();
+          blacklists.push(phoneStr);
+        }
+      }
+    }
+    // 🔴🔴🔴 จบ: โค้ดที่เพิ่มเข้ามาใหม่เพื่อดึงข้อมูลแบล็คลิสต์ไปเช็ค 🔴🔴🔴
+
+    return ContentService.createTextOutput(JSON.stringify({ bookings, participants, blacklists })).setMimeType(ContentService.MimeType.JSON);
   } catch (error) {
     return ContentService.createTextOutput(JSON.stringify({ status: 'error', message: error.toString() })).setMimeType(ContentService.MimeType.JSON);
   }
 }
+
 
 // 🔔 ฟังก์ชันกลางสำหรับเรียกยิงส่งข้อความไปยัง LINE OA (ใช้โทเคนและรหัสของคุณ)
 function sendLineNotification(text) {
@@ -482,5 +539,28 @@ function deleteOldBookings() {
         }
       }
     }
+  }
+}
+
+// =====================================================================
+// 📊 ฟังก์ชันบันทึก Event Log สำหรับทำ Dashboard
+// =====================================================================
+function logToDashboard(ss, type, date, court, time, price, name, phone) {
+  try {
+    let dashSheet = ss.getSheetByName('DashBoard');
+    if (dashSheet) {
+      dashSheet.appendRow([
+        new Date(),
+        type || '',
+        date || '',
+        court || '',
+        time || '',
+        price || '',
+        name || '',
+        phone || ''
+      ]);
+    }
+  } catch (e) {
+    console.error("Dashboard Log Error:", e);
   }
 }
